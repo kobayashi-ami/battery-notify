@@ -1,0 +1,48 @@
+{
+  "bark_key": "YOUR_BARK_KEY_HERE",
+  "mac_sound": "Submarine",
+  "iphone_sound": "bell",
+  "patrol_min_interval_seconds": 30,
+  "patrol_max_interval_seconds": 600,
+  "patrol_ac_interval_seconds": 600,
+  "patrol_seconds_per_percent": 30,
+  "battery_thresholds": [
+    20
+  ],
+  "reset_percent": 30,
+  "excluded_apps": [
+    "Cubase",
+    "FL Studio",
+    "Adobe Photoshop",
+    "Adobe Illustrator",
+    "Adobe Premiere Pro",
+    "Adobe After Effects",
+    "Adobe Lightroom Classic",
+    "Adobe InDesign",
+    "Adobe Audition",
+    "Adobe XD",
+    "Facebook"
+  ],
+  "streaming_domains": [
+    "facebook.com",
+    "youtube.com",
+    "youtu.be",
+    "netflix.com",
+    "twitch.tv",
+    "primevideo.com",
+    "unext.jp",
+    "hulu.jp",
+    "disneyplus.com",
+    "abema.tv",
+    "nicovideo.jp",
+    "tver.jp"
+  ],
+  "browsers": [
+    "Safari",
+    "Google Chrome",
+    "Arc",
+    "Brave Browser",
+    "Microsoft Edge",
+    "Vivaldi"
+  ]
+}
