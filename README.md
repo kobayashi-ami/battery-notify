@@ -54,7 +54,7 @@ launchdの`KeepAlive`が、この見回りを見守っています。もし止�
 
 ## 通知の音
 
-Sosumiやalarm、chime、minuetみたいな、明るくて「会社っぽい」音は、やめました。
+Sosumiやalarm、chime、minuetみたいな、明るくて量産型みたいな音は、やめました。
 ほしかったのは、もっと無機質で、低い音です。
 
 - `mac_sound`（今は**Submarine**） → ソナーのような、低くこもった音。
