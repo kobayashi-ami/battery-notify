@@ -1,71 +1,100 @@
 # battery-notify
 
-充電残量が20%を切ったら通知が来る。ただしこの見張り番は、いつ声を上げていいかをわきまえている。
+充電が20%より下がったら、教えてくれるソフトです。
+でも、教える方法は、そのとき何をしているかで変わります。
 
-Cubaseで書き出し中、Adobeで格闘中、配信や映画に沈んでいる最中に、右上からポップアップで割り込まれるのは邪魔でしかない。だからそのときは画面には何も出さず、代わりにiPhoneのポケットの中でひっそり鳴らす。判断基準は単純で、フォアグラウンドのアプリ名か、ブラウザが開いている視聴中タブのドメインを見るだけ。PVかライブか映画かまでは区別しない、そこまでは踏み込まない主義。
+Cubaseで曲を書き出しているとき。Adobeのソフトを使っているとき。配信や映画を見ているとき。
+そんなときにMacの画面にポップアップが出ると、じゃまになります。
+だから、そのときはMacには何も出しません。かわりに、iPhoneにそっと知らせます。
 
-- **通常時** → Macにネイティブ通知（terminal-notifier）
-- **Cubase / FL Studio / Adobeアプリ / Facebook が最前面、または主要ストリーミングサイト
-  （YouTube, Netflix, Twitch, Prime Video, U-NEXT, Hulu, Disney+, ABEMA, ニコニコ動画, TVer）
-  を視聴中** → Mac通知は出さず、iPhoneにBark通知
+判断のしかたは、かんたんです。いま一番前にあるアプリの名前を見ます。
+ブラウザなら、開いているタブのアドレスを見ます。
+PVなのか、ライブなのか、映画なのかは、区別しません。そこまではしません。
 
-## 見回りスケジュール
+- **ふだん** → Macに通知が出ます（terminal-notifier）
+- **Cubase / FL Studio / Adobeのアプリ / Facebook が一番前にあるとき**、
+  **または、よく使う配信サイト（YouTube、Netflix、Twitch、Prime Video、
+  U-NEXT、Hulu、Disney+、ABEMA、ニコニコ動画、TVer）を見ているとき**
+  → Macには出さず、iPhoneにBarkで通知します
 
-固定間隔でずっと監視するのは芸がないし、無駄にCPUを起こし続けるだけなので、状況に応じて見回りの足取りを変える常駐ループにした。
+## 見回りのしかた
 
-- **AC接続中**（満充電維持中も含む）→ ゆったり、既定600秒に1回だけ様子を見る
-- **バッテリー駆動中** → `(現在% − 最低閾値) × patrol_seconds_per_percent`秒。
-  20%が遠いうちは長く休み、近づくにつれて足早になる。
-  `patrol_min_interval_seconds`〜`patrol_max_interval_seconds`でクランプ
+ずっと同じ間隔でチェックするのは、もったいないです。CPUをむだに起こしてしまいます。
+なので、状況によって見回る間隔を変えています。
 
-安全マージンの根拠は「最悪ケースのドレイン速度＝1%/分」。この係数なら、Adobeの書き出しやCubaseのレンダリングで電力を食い潰している最中でも、閾値の窓を素通りせずに捕まえられる計算になっている。launchdは`KeepAlive`でこのループを見守り、死んだら即座に叩き起こす。
+- **電源につながっているとき**（満充電を保っているときも含む）
+  → のんびり、既定600秒に1回だけ見ます
+- **バッテリーで動いているとき**
+  → `(今の% − 一番低いしきい値) × patrol_seconds_per_percent`秒。
+  20%まで遠いときは長く休み、近づくほど、こまめに見に行きます。
+  `patrol_min_interval_seconds`〜`patrol_max_interval_seconds`の
+  範囲におさまるようにしています。
 
-## セットアップ
+この計算のもとになっているのは、「一番はやくバッテリーが減るときで、
+1分に1%減る」という想定です。この速さでも、20%のラインを
+見のがさずにつかまえられるように、間隔を決めています。
 
-1. iPhoneでApp Storeから「Bark - Custom Notifications」をインストールし、
-   表示されるデバイスキーをコピー（「Bark Kids」は子供の見守りアプリで別物なので注意）
-2. `cp config.example.json config.json` してから `bark_key` をそのキーに書き換える
-   （`config.json` は実キー入りなので`.gitignore`済み、コミットされない）
-3. `./install.sh` を実行（launchdに登録、常駐開始）
+launchdの`KeepAlive`が、この見回りを見守っています。もし止まっても、すぐにまた動き出します。
 
-除外アプリやストリーミングサイトを増やしたい場合は `config.json` の
-`excluded_apps` / `streaming_domains` を編集するだけでいい（再インストール不要、
-次の見回りから即反映される）。見回り間隔の係数も同様。
+## つかいかた
 
-## 通知音
+1. iPhoneでApp Storeから「Bark - Custom Notifications」を入れます。
+   出てきたデバイスキーをコピーしてください。
+   （「Bark Kids」という似た名前の、子ども見守り用の別アプリがあるので、
+   まちがえないでください）
+2. `cp config.example.json config.json` を実行してから、
+   `config.json`の`bark_key`を、そのキーに書きかえます。
+   （`config.json`には本物のキーが入っているので、`.gitignore`で
+   gitには乗らないようにしてあります）
+3. `./install.sh` を実行します（launchdに登録され、動きはじめます）
 
-コーポレートな「LLCっぽい」明るいチャイム（Sosumi、alarm、chime、minuetの類）は却下した。狙ったのはもっとインダストリアルで、無機質で、低い周波数帯のもの。
+除外したいアプリや、配信サイトを増やしたいときは、
+`config.json`の`excluded_apps` / `streaming_domains`に書き足すだけで大丈夫です。
+入れ直す必要はありません。見回りの間隔の数字を変えるときも同じです。
 
-- `mac_sound`（既定: **Submarine**） — ソナーの底鳴りのような、低くくぐもった単音。
-  他の候補: Basso, Blow, Bottle, Frog, Funk, Glass, Hero, Morse, Ping, Pop, Purr, Sosumi, Tink, default
-- `iphone_sound`（既定: **bell**） — 一発だけ鳴って、そのまま余韻に沈んでいくポーンという音。
-  他の候補: alarm, anticipate, birdsong, bloom, calypso, chime, choo, descent, electronic, fanfare,
-  glass, gotosleep, healthnotification, horn, ladder, mailsent, minuet,
+## 通知の音
+
+Sosumiやalarm、chime、minuetみたいな、明るくて「会社っぽい」音は、やめました。
+ほしかったのは、もっと無機質で、低い音です。
+
+- `mac_sound`（今は**Submarine**） → ソナーのような、低くこもった音。
+  ほかにも選べます：Basso, Blow, Bottle, Frog, Funk, Glass, Hero, Morse,
+  Ping, Pop, Purr, Sosumi, Tink, default
+- `iphone_sound`（今は**bell**） → 一回だけ鳴って、すっと消えていく音。
+  ほかにも選べます：alarm, anticipate, birdsong, bloom, calypso, chime,
+  choo, descent, electronic, fanfare, glass, gotosleep,
+  healthnotification, horn, ladder, mailsent, minuet,
   multiwayinvitation, newmail, newsflash, noir, paymentsuccess, shake,
   sherwoodforest, silence, spell, suspense, telegraph, tiptoes,
   typewriters, update
 
-`config.json`を書き換えるだけで、次の通知から反映される。
+`config.json`を書きかえるだけで、次の通知から変わります。
 
-## ファイル
+## ファイルの説明
 
-- `monitor.sh` — 本体。見回りループ（バッテリー%取得→閾値判定→除外判定→通知→ログローテーション→次回間隔計算→sleep）
-- `config.json` — Bark key・閾値・見回り間隔係数・通知音・除外アプリ/サイトの設定
-- `config.example.json` — 上記のテンプレート（実キーなし、gitにはこちらだけ乗る）
-- `state.json` — 通知済み閾値の記録（充電されて`reset_percent`以上になるとリセット）
-- `install.sh` / `uninstall.sh` — launchd登録/解除
-- `logs/monitor.log` — 動作ログ。2000行を超えると古い分から静かに切り捨てられる
+- `monitor.sh` — 本体です。見回りのループが入っています
+  （バッテリーを見る→しきい値を見る→除外かどうか見る→通知する→
+  ログを整理する→次の間隔を決める→眠る、のくり返し）
+- `config.json` — Barkのキーや、しきい値、見回りの間隔、通知の音、
+  除外するアプリ／サイトの設定が入っています
+- `config.example.json` — 上のひな形です。キーは入っていません。gitに乗るのはこちらだけです
+- `state.json` — もう通知したしきい値の記録です。
+  充電されて`reset_percent`以上にもどると、消えます
+- `install.sh` / `uninstall.sh` — launchdへの登録・解除をします
+- `logs/monitor.log` — 動いた記録です。2000行をこえたら、古い分から自動で消えます
 
-## 停止・削除
+## 止める・消す
 
 ```
 ./uninstall.sh
 ```
 
-## 注意
+## 気をつけること
 
-- 初回、System EventsやブラウザのURL取得でmacOSの権限ダイアログ
-  （アクセシビリティ／自動化、通知の許可）が出ることがある。許可すること。
-  terminal-notifierは`System Settings → 通知`で個別に許可が必要な場合がある。
-- Cubase/FL Studioが他のアプリ名と被る場合は完全一致ではなく部分一致で
-  判定しているので、`config.json`側で調整可能。
+- 最初に一度、System Eventsやブラウザのアドレスを見るときに、
+  macOSの許可の画面が出ることがあります（アクセシビリティ、自動化、通知）。
+  出たら、許可してください。
+  terminal-notifierは、`System Settings → 通知`で、別に許可がいることがあります。
+- Cubase や FL Studio という名前が、ほかのアプリの名前とかぶってしまう場合は、
+  完全に同じ名前ではなく、名前の一部が合っていれば見つかるようにしています。
+  `config.json`で調整できます。
