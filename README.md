@@ -1,21 +1,13 @@
 # battery-notify
 
-充電が20%より下がったら、教えてくれるソフトです。
-でも、教える方法は、そのとき何をしているかで変わります。
+充電が20%より下がったら、iPhoneに知らせてくれるソフトです。
 
-Cubaseで曲を書き出しているとき。Adobeのソフトを使っているとき。配信や映画を見ているとき。
-そんなときにMacの画面にポップアップが出ると、じゃまになります。
-だから、そのときはMacには何も出しません。かわりに、iPhoneにそっと知らせます。
+Macは、もともとOSが自分で「バッテリーが少なくなりました」と教えてくれます。
+これは、Cubaseで書き出し中でも、Adobeのソフトを使っていても、お構いなしに出ます。
+だから、Mac側の通知は、あらためて作る必要がありませんでした。
+このソフトがやることは、ひとつだけです。iPhoneにも、同じタイミングで知らせること。
 
-判断のしかたは、かんたんです。いま一番前にあるアプリの名前を見ます。
-ブラウザなら、開いているタブのアドレスを見ます。
-PVなのか、ライブなのか、映画なのかは、区別しません。そこまではしません。
-
-- **ふだん** → Macに通知が出ます（terminal-notifier）
-- **Cubase / FL Studio / Adobeのアプリ / Facebook が一番前にあるとき**、
-  **または、よく使う配信サイト（YouTube、Netflix、Twitch、Prime Video、
-  U-NEXT、Hulu、Disney+、ABEMA、ニコニコ動画、TVer）を見ているとき**
-  → Macには出さず、iPhoneにBarkで通知します
+- 20%を切ったら → iPhoneにBarkで通知します（毎回、必ず）
 
 ## 見回りのしかた
 
@@ -48,35 +40,30 @@ launchdの`KeepAlive`が、この見回りを見守っています。もし止�
    gitには乗らないようにしてあります）
 3. `./install.sh` を実行します（launchdに登録され、動きはじめます）
 
-除外したいアプリや、配信サイトを増やしたいときは、
-`config.json`の`excluded_apps` / `streaming_domains`に書き足すだけで大丈夫です。
-入れ直す必要はありません。見回りの間隔の数字を変えるときも同じです。
+見回りの間隔の数字を変えたいときは、`config.json`を書きかえるだけで大丈夫です。
+入れ直す必要はありません。
 
 ## 通知の音
 
-Sosumiやalarm、chime、minuetみたいな、コンビニの入店音みたいに明るい音は、やめました。
-ほしかったのは、もっと無機質で、低い音です。
+コンビニの入店音みたいに明るい音（Sosumi、alarm、chime、minuetの類）は、やめました。
+ほしかったのは、もっと無機質で、低い音です。今は**bell**（一回だけ鳴って、
+すっと消えていく音）にしています。
 
-- `mac_sound`（今は**Submarine**） → ソナーのような、低くこもった音。
-  ほかにも選べます：Basso, Blow, Bottle, Frog, Funk, Glass, Hero, Morse,
-  Ping, Pop, Purr, Sosumi, Tink, default
-- `iphone_sound`（今は**bell**） → 一回だけ鳴って、すっと消えていく音。
-  ほかにも選べます：alarm, anticipate, birdsong, bloom, calypso, chime,
-  choo, descent, electronic, fanfare, glass, gotosleep,
-  healthnotification, horn, ladder, mailsent, minuet,
-  multiwayinvitation, newmail, newsflash, noir, paymentsuccess, shake,
-  sherwoodforest, silence, spell, suspense, telegraph, tiptoes,
-  typewriters, update
+ほかにも選べます：alarm, anticipate, birdsong, bloom, calypso, chime,
+choo, descent, electronic, fanfare, glass, gotosleep,
+healthnotification, horn, ladder, mailsent, minuet,
+multiwayinvitation, newmail, newsflash, noir, paymentsuccess, shake,
+sherwoodforest, silence, spell, suspense, telegraph, tiptoes,
+typewriters, update
 
-`config.json`を書きかえるだけで、次の通知から変わります。
+`config.json`の`iphone_sound`を書きかえるだけで、次の通知から変わります。
 
 ## ファイルの説明
 
 - `monitor.sh` — 本体です。見回りのループが入っています
-  （バッテリーを見る→しきい値を見る→除外かどうか見る→通知する→
-  ログを整理する→次の間隔を決める→眠る、のくり返し）
-- `config.json` — Barkのキーや、しきい値、見回りの間隔、通知の音、
-  除外するアプリ／サイトの設定が入っています
+  （バッテリーを見る→しきい値を見る→通知する→ログを整理する→
+  次の間隔を決める→眠る、のくり返し）
+- `config.json` — Barkのキーや、しきい値、見回りの間隔、通知の音の設定が入っています
 - `config.example.json` — 上のひな形です。キーは入っていません。gitに乗るのはこちらだけです
 - `state.json` — もう通知したしきい値の記録です。
   充電されて`reset_percent`以上にもどると、消えます
@@ -88,13 +75,3 @@ Sosumiやalarm、chime、minuetみたいな、コンビニの入店音みたい�
 ```
 ./uninstall.sh
 ```
-
-## 気をつけること
-
-- 最初に一度、System Eventsやブラウザのアドレスを見るときに、
-  macOSの許可の画面が出ることがあります（アクセシビリティ、自動化、通知）。
-  出たら、許可してください。
-  terminal-notifierは、`System Settings → 通知`で、別に許可がいることがあります。
-- Cubase や FL Studio という名前が、ほかのアプリの名前とかぶってしまう場合は、
-  完全に同じ名前ではなく、名前の一部が合っていれば見つかるようにしています。
-  `config.json`で調整できます。

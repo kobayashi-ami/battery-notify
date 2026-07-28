@@ -1,7 +1,7 @@
 #!/bin/bash
-# バッテリー残量監視: 20%を切ったら通知。
-# Cubase/FL Studio/Adobe/Facebook/主要ストリーミングサイト視聴中は
-# Mac側通知を出さずiPhone(Bark)にだけ飛ばす。
+# バッテリー残量監視: 20%を切ったらiPhoneにBark通知。
+# Mac自体がOS標準で低バッテリー通知を出す（アプリを問わず出る）ので、
+# こちらはMac側の通知は作らず、常にiPhoneへ送るだけにしている。
 #
 # 見回りスケジュール方式：固定間隔ではなく、AC接続中/バッテリー残量から
 # 次の見回りまでの秒数を毎回計算する常駐ループ（launchdのKeepAliveで維持）。
@@ -26,65 +26,16 @@ rotate_log() {
 
 [ -f "$STATE" ] || echo '{"notified_thresholds":[]}' > "$STATE"
 
-get_frontmost_app() {
-  osascript -e 'tell application "System Events" to get name of first application process whose frontmost is true' 2>/dev/null
-}
-
-get_active_url() {
-  local app="$1"
-  if [ "$app" = "Safari" ]; then
-    osascript -e 'tell application "Safari" to get URL of front document' 2>/dev/null
-  else
-    osascript -e "tell application \"$app\" to get URL of active tab of front window" 2>/dev/null
-  fi
-}
-
-is_excluded() {
-  local frontmost pat url dom is_browser b
-  frontmost=$(get_frontmost_app)
-  [ -z "$frontmost" ] && return
-
-  while IFS= read -r pat; do
-    if [[ "$frontmost" == *"$pat"* ]]; then
-      echo "$frontmost"
-      return
-    fi
-  done < <(jq -r '.excluded_apps[]' "$CONFIG")
-
-  is_browser=false
-  while IFS= read -r b; do
-    [ "$frontmost" = "$b" ] && is_browser=true
-  done < <(jq -r '.browsers[]' "$CONFIG")
-
-  if $is_browser; then
-    url=$(get_active_url "$frontmost")
-    if [ -n "$url" ]; then
-      while IFS= read -r dom; do
-        if [[ "$url" == *"$dom"* ]]; then
-          echo "${frontmost}（${dom}）"
-          return
-        fi
-      done < <(jq -r '.streaming_domains[]' "$CONFIG")
-    fi
-  fi
-}
-
-notify_mac() {
-  local percent="$1" sound
-  sound=$(jq -r '.mac_sound // "default"' "$CONFIG")
-  terminal-notifier -title "バッテリー残量低下" -message "残り${percent}%です" -sound "$sound" -group battery-notify >/dev/null 2>&1
-}
-
 notify_iphone() {
-  local percent="$1" reason="$2" sound
+  local percent="$1" sound
   if [ "$BARK_KEY" = "YOUR_BARK_KEY_HERE" ] || [ -z "$BARK_KEY" ]; then
     log "Bark keyが未設定のためiPhone通知をスキップ（config.jsonを編集してください）"
     return
   fi
-  sound=$(jq -r '.iphone_sound // "minuet"' "$CONFIG")
+  sound=$(jq -r '.iphone_sound // "bell"' "$CONFIG")
   local payload
   payload=$(jq -n --arg key "$BARK_KEY" --arg title "バッテリー残量低下" \
-    --arg body "残り${percent}%です（${reason}中のためMac通知は省略）" \
+    --arg body "残り${percent}%です" \
     --arg sound "$sound" \
     '{device_key:$key, title:$title, body:$body, sound:$sound}')
   curl -s -X POST "https://api.day.app/push" \
@@ -95,7 +46,7 @@ notify_iphone() {
 # 1回分のチェック。結果はグローバル変数 LAST_PERCENT / LAST_ON_AC にセットする
 # （次の見回り間隔の計算に使う）。
 do_check() {
-  local batt_info percent on_ac_local reset_percent thresholds t already reason
+  local batt_info percent on_ac_local reset_percent thresholds t already
 
   BARK_KEY=$(jq -r '.bark_key' "$CONFIG")
   reset_percent=$(jq -r '.reset_percent' "$CONFIG")
@@ -131,14 +82,8 @@ do_check() {
     if [ "$percent" -le "$t" ]; then
       already=$(jq --argjson t "$t" '.notified_thresholds | index($t) != null' "$STATE")
       if [ "$already" = "false" ]; then
-        reason=$(is_excluded)
-        if [ -n "$reason" ]; then
-          notify_iphone "$percent" "$reason"
-          log "${t}%到達（${percent}%）: ${reason} を検出 → iPhone通知"
-        else
-          notify_mac "$percent"
-          log "${t}%到達（${percent}%）: Mac通知"
-        fi
+        notify_iphone "$percent"
+        log "${t}%到達（${percent}%）: iPhone通知"
         tmp=$(jq --argjson t "$t" '.notified_thresholds += [$t]' "$STATE")
         echo "$tmp" > "$STATE"
       fi
